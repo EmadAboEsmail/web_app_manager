@@ -1,0 +1,36 @@
+.home-container {
+  padding: 20px;
+  transition: background-color 0.3s, color 0.3s;
+  min-height: 100vh; /* التأكد من تغطية كامل ارتفاع الصفحة */
+}
+
+.dark-mode {
+  background-color: #333;
+  color: #fff;
+}
+
+.light-mode {
+  background-color: #fff;
+  color: #000;
+}
+
+.nav-links {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.nav-link {
+  color: inherit; /* استخدام اللون الحالي */
+  text-decoration: none; /* إزالة خط التسطير */
+  padding: 10px;
+  border-radius: 5px; /* إضافة زوايا دائرية */
+  transition: background-color 0.3s, color 0.3s; /* تأثير الانتقال */
+}
+
+.nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.2); /* لون خلفية عند التحويم */
+  color: #1890ff; /* تغيير اللون عند التحويم */
+}
+

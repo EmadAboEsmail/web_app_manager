@@ -1,0 +1,14 @@
+/* styles.css */
+body[data-theme='dark'] {
+    background-color: #121212; /* لون خلفية الوضع الداكن */
+    color: white; /* لون نص الوضع الداكن */
+    transition: background-color 0.3s, color 0.3s; /* تأثير الانتقال */
+}
+
+body[data-theme='light'] {
+    background-color: white; /* لون خلفية الوضع الفاتح */
+    color: black; /* لون نص الوضع الفاتح */
+}
+
+/* يمكنك إضافة المزيد من الأنماط هنا */
+
