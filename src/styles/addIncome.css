@@ -1,0 +1,42 @@
+.add-income-container {
+    max-width: 400px; /* تحديد عرض الحاوية */
+    margin: 20px auto; /* مركز الحاوية */
+    padding: 20px; /* إضافة مسافة داخلية */
+    border-radius: 8px; /* زوايا دائرية */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* إضافة ظل */
+    background-color: #ffffff; /* لون خلفية أبيض */
+}
+
+.add-income-container h4 {
+    text-align: center; /* توسيط العنوان */
+    color: #333; /* لون نص العنوان */
+    margin-bottom: 20px; /* مسافة سفلية */
+}
+
+.ant-form-item {
+    margin-bottom: 16px; /* زيادة المسافة بين العناصر */
+}
+
+.ant-btn-primary {
+    background-color: #4caf50; /* لون الزر */
+    border-color: #4caf50; /* لون الحدود */
+}
+
+.ant-btn-primary:hover {
+    background-color: #45a049; /* لون الزر عند التمرير */
+    border-color: #45a049; /* لون الحدود عند التمرير */
+}
+.edit-income-container {
+    max-width: 400px; /* تحديد عرض الحاوية */
+    margin: 20px auto; /* مركز الحاوية */
+    padding: 20px; /* إضافة مسافة داخلية */
+    border-radius: 8px; /* زوايا دائرية */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* إضافة ظل */
+    background-color: #ffffff; /* لون خلفية أبيض */
+}
+
+.edit-income-container h4 {
+    text-align: center; /* توسيط العنوان */
+    color: #333; /* لون نص العنوان */
+    margin-bottom: 20px; /* مسافة سفلية */
+}

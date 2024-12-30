@@ -1,7 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { getUserIncomes, deleteIncome } from '@/api/index'; 
-import { Link } from 'react-router-dom'; 
-import { Modal, message, Button, Spin } from 'antd'; 
+import { getUserIncomes, deleteIncome } from '@/api/index';
+import { Link } from 'react-router-dom';
+import { Modal, message, Button, Spin, List } from 'antd';
+
+import { DeleteOutlined, EditOutlined} from '@ant-design/icons';
+
 
 const IncomeList = () => {
     const [income, setIncome] = useState([]);
@@ -10,28 +13,29 @@ const IncomeList = () => {
     const [deleteId, setDeleteId] = useState(null);
     const [isModalVisible, setIsModalVisible] = useState(false);
 
-    const userId = localStorage.getItem('userId');
+    const userId = localStorage.getItem('selectedUserId');
 
     const fetchIncome = useCallback(async () => {
+        if (!userId) {
+            setError('لم يتم العثور على معرف المستخدم في localStorage.');
+            setLoading(false);
+            return;
+        }
+
         try {
             const incomeData = await getUserIncomes(userId);
+            // console.log('incomeData', incomeData);
             setIncome(incomeData);
         } catch (error) {
-            console.error('Error fetching income:', error);
-            setError('Could not fetch income data.');
+            setError('فشل في جلب بيانات الدخل. يرجى المحاولة لاحقًا.');
         } finally {
             setLoading(false);
         }
     }, [userId]);
 
     useEffect(() => {
-        if (userId) {
-            fetchIncome();
-        } else {
-            setError('User ID not found in localStorage.');
-            setLoading(false);
-        }
-    }, [fetchIncome, userId]);
+        fetchIncome();
+    }, [fetchIncome]);
 
     const handleDelete = (id) => {
         setDeleteId(id);
@@ -42,9 +46,9 @@ const IncomeList = () => {
         try {
             await deleteIncome(deleteId);
             setIncome(income.filter(item => item.id !== deleteId));
-            message.success('Income deleted successfully');
+            message.success('تم حذف الدخل بنجاح');
         } catch (error) {
-            message.error('Error deleting income: ' + error.message);
+            message.error('خطأ في حذف الدخل: ' + error.message);
         } finally {
             setIsModalVisible(false);
             setDeleteId(null);
@@ -59,39 +63,46 @@ const IncomeList = () => {
     if (loading) {
         return (
             <div style={{ textAlign: 'center', marginTop: '20%' }}>
-                <Spin size="large" tip="Loading income..." />
+                <Spin size="default" />
             </div>
-        ); // استخدام Spin مع تنسيق مناسب
+        );
     }
 
     if (error) {
-        return <div className="error-message">{error}</div>;
+        return <div className="error-message" style={{ color: 'red', textAlign: 'center' }}>{error}</div>;
     }
 
     return (
-        <div>
-            <h2>Income List</h2>
+        <div style={{ padding: '20px', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+            <h2 style={{ color: '#333' }}>قائمة الدخل</h2>
             <Link to="/incomes/new">
-                <Button type="primary" style={{ marginBottom: '10px' }}>Add New Income</Button>
+                <Button type="primary" style={{ marginBottom: '10px' }}>إضافة دخل جديد</Button>
             </Link>
-            <ul>
-                {income.map(item => (
-                    <li key={item.id} style={{ marginBottom: '10px' }}>
-                        {item.source} - ${item.amount}
-                        <Link to={`/incomes/edit/${item.id}`}>
-                            <Button type="link">Edit</Button>
-                        </Link>
-                        <Button type="link" danger onClick={() => handleDelete(item.id)}>Delete</Button>
-                    </li>
-                ))}
-            </ul>
+            <List
+                bordered
+                dataSource={income}
+                renderItem={item => (
+                    <List.Item
+                        actions={[
+                            <Link to={`/incomes/edit/${item.id}`}>
+                                <Button type="link"><EditOutlined /></Button>
+                            </Link>,
+                            <Button type="link" danger onClick={() => handleDelete(item.id)}>
+                                <DeleteOutlined />
+                            </Button>
+                        ]}
+                    >
+                        {item.description} - ${item.amount}
+                    </List.Item>
+                )}
+            />
             <Modal
-                title="Confirm Delete"
-                visible={isModalVisible}
+                title="تأكيد الحذف"
+                open={isModalVisible}
                 onOk={confirmDelete}
                 onCancel={handleCancel}
             >
-                <p>Are you sure you want to delete this income?</p>
+                <p>هل أنت متأكد أنك تريد حذف هذا الدخل؟</p>
             </Modal>
         </div>
     );

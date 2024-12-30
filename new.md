@@ -1,179 +1,188 @@
-بالطبع! إليك الكود النهائي مع شرح لتفاصيل كل جزء، بالإضافة إلى هيكل المجلدات المناسب لمشروعك.
+// Home.js
+import React, { useEffect, useState, useCallback } from 'react';
+import { notification, Spin, Select, Button, Modal, Avatar, Card, Row, Col } from 'antd';
+import { getAllUsers, createUser, updateUser, deleteUser } from '@/api/index';
+import UserForm from '@/components/Users/UserForm';
+import FloatingButton from '@/components/Users/FloatingButton';
+import { DollarOutlined, UserAddOutlined, CreditCardOutlined, DeleteOutlined, ReadOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom'; // استيراد useNavigate
 
-### هيكل المجلدات المقترح:
-```
-my-app/
-├── src/
-│   ├── components/
-│   │   ├── MenuItems.js
-│   │   └── Navbar.js
-│   ├── context/
-│   │   └── ThemeContext.js
-│   ├── store/
-│   │   ├── userSlice.js
-│   │   └── store.js
-│   ├── App.js
-│   ├── index.js
-│   └── styles/
-│       └── App.css
-├── package.json
-└── ...
-```
+const { Option } = Select;
 
-### 1. **ملف `userSlice.js`:**
-```javascript
-import { createSlice } from '@reduxjs/toolkit';
+const Home = () => {
+    const navigate = useNavigate(); // استخدام useNavigate بدلاً من useHistory
+    const [users, setUsers] = useState([]);
+    const [selectedUserId, setSelectedUserId] = useState(localStorage.getItem('selectedUserId') || null);
+    const [loading, setLoading] = useState(true);
+    const [showForm, setShowForm] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null); // حالة لتخزين بيانات المستخدم المحدد
 
-const userSlice = createSlice({
-    name: 'user',
-    initialState: {
-        selectedUserId: null, // الحالة الأولية
-    },
-    reducers: {
-        setSelectedUserId(state, action) {
-            state.selectedUserId = action.payload; // تعيين معرف المستخدم المحدد
-        },
-        clearSelectedUserId(state) {
-            state.selectedUserId = null; // إعادة تعيين معرف المستخدم
-        },
-    },
-});
-
-// تصدير الدوال
-export const { setSelectedUserId, clearSelectedUserId } = userSlice.actions;
-
-export default userSlice.reducer; // تصدير الـ reducer
-```
-
-### 2. **ملف `store.js`:**
-```javascript
-import { configureStore } from '@reduxjs/toolkit';
-import userReducer from './userSlice'; // استيراد الـ reducer
-
-const store = configureStore({
-    reducer: {
-        user: userReducer, // إضافة الـ reducer إلى المتجر
-    },
-});
-
-export default store; // تصدير المتجر
-```
-
-### 3. **ملف `Navbar.js`:**
-```javascript
-import React, { useState, useEffect, useCallback } from 'react';
-import { Layout, Drawer, Button, notification } from 'antd';
-import { MenuOutlined, SunOutlined, MoonOutlined } from '@ant-design/icons';
-import MenuItems from './MenuItems';
-import { useTheme } from '@/context/ThemeContext';
-import { useDispatch, useSelector } from 'react-redux';
-import { setSelectedUserId } from '@/store/userSlice'; // استيراد الدالة من الـ slice
-
-const { Header } = Layout;
-
-const Navbar = () => {
-    const [open, setOpen] = useState(false);
-    const { isDarkMode, toggleTheme } = useTheme();
-    const dispatch = useDispatch();
-    const selectedUserId = useSelector(state => state.user.selectedUserId); // استخدام useSelector للحصول على حالة selectedUserId
+    const fetchAllUsers = useCallback(async () => {
+        setLoading(true);
+        try {
+            const allUsers = await getAllUsers();
+            setUsers(allUsers);
+        } catch (err) {
+            notification.error({
+                message: 'خطأ',
+                description: `فشل في تحميل المستخدمين: ${err.message}`,
+            });
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
-        localStorage.setItem('selectedUserId', selectedUserId || '');
-    }, [selectedUserId]);
+        fetchAllUsers();
+    }, [fetchAllUsers]);
 
-    useEffect(() => {
-        notification.info({
-            message: 'تغيير الثيم',
-            description: `تم تغيير الثيم إلى ${isDarkMode ? 'داكن' : 'فاتح'}`,
+    const handleUserSelect = async (userId) => {
+        setSelectedUserId(userId);
+        localStorage.setItem('selectedUserId', userId);
+        setIsEditing(users.some(user => user.id === userId));
+
+        // جلب بيانات المستخدم المحدد
+        const user = users.find(user => user.id === userId);
+        setSelectedUser(user);
+    };
+
+    const handleSubmit = async (values) => {
+        try {
+            if (isEditing) {
+                await updateUser(selectedUserId, values);
+                notification.success({ message: 'نجاح', description: 'تم تحديث المستخدم بنجاح' });
+            } else {
+                await createUser(values);
+                notification.success({ message: 'نجاح', description: 'تم إضافة مستخدم بنجاح' });
+            }
+            await fetchAllUsers();
+            setShowForm(false);
+            localStorage.removeItem('selectedUserId');
+        } catch (err) {
+            notification.error({
+                message: 'خطأ',
+                description: `فشل في حفظ المستخدم: ${err.message}`,
+            });
+        }
+    };
+
+    const handleDeleteUser = () => {
+        Modal.confirm({
+            title: 'تأكيد الحذف',
+            content: 'هل أنت متأكد أنك تريد حذف هذا المستخدم؟',
+            onOk: async () => {
+                try {
+                    await deleteUser(selectedUserId);
+                    notification.success({ message: 'نجاح', description: 'تم حذف المستخدم بنجاح' });
+                    await fetchAllUsers();
+                    setSelectedUserId(null);
+                    setSelectedUser(null); // إعادة تعيين بيانات المستخدم
+                    localStorage.removeItem('selectedUserId');
+                } catch (err) {
+                    notification.error({
+                        message: 'خطأ',
+                        description: `فشل في حذف المستخدم: ${err.message}`,
+                    });
+                }
+            },
         });
-    }, [isDarkMode]);
+    };
 
-    const showDrawer = useCallback(() => {
-        setOpen(true);
-    }, []);
+    if (loading) {
+        return <Spin size="large" />;
+    }
 
-    const onClose = useCallback(() => {
-        setOpen(false);
-    }, []);
+    const menuItems = [
+        {
+            label: 'incomes',
+            icon: <DollarOutlined />,
+            onClick: () => navigate('/incomes'),
+        },
+        {
+            label: 'expenses',
+            icon: <CreditCardOutlined />,
+            onClick: () => navigate('/expenses'),
+        },
+        {
+            label: 'articles',
+            icon: <ReadOutlined />,
+            onClick: () => navigate('/articles'),
+        },
+        {
+            label: 'adduser',
+            icon: <UserAddOutlined />,
+            onClick: () => {
+                setIsEditing(false);
+                setShowForm(true);
+            },
+        },
+    ];
 
     return (
-        <Layout>
-            <Header className="navbar" style={{ display: 'flex', alignItems: 'center', backgroundColor: isDarkMode ? '#001529' : '#ffffff' }}>
-                <div className="logo">
-                    <h1 style={{ margin: 0, color: isDarkMode ? 'white' : 'black' }}>MyApp</h1>
+        <div style={{ padding: '20px', backgroundColor: '#f5f5f5', minHeight: '100vh', direction: 'rtl' }}>
+            <header style={{ marginBottom: '20px', textAlign: 'center' }}>
+                <h1 style={{ color: '#333', fontSize: '2rem' }}>إدارة المستخدمين</h1>
+            </header>
+            
+            {!selectedUserId ? (
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+                    <Select
+                        style={{ flex: 1, marginRight: '10px' }}
+                        placeholder="اختر مستخدمًا"
+                        onChange={handleUserSelect}
+                        value={selectedUserId || undefined}
+                    >
+                        {users.map(user => (
+                            <Option key={user.id} value={user.id}>
+                                {user.username}
+                            </Option>
+                        ))}
+                    </Select>
+
+                    {isEditing && (
+                        <Button 
+                            type="default" 
+                            danger 
+                            onClick={handleDeleteUser} 
+                        >
+                            <DeleteOutlined /> حذف
+                        </Button>
+                    )}
                 </div>
-                <Button 
-                    className="theme-button"
-                    type="default"
-                    onClick={toggleTheme}
-                    icon={isDarkMode ? <SunOutlined /> : <MoonOutlined />}
-                    style={{ marginLeft: '16px' }}
-                    aria-label="Toggle theme"
-                />
-                <Button 
-                    className="menu-button"
-                    type="primary" 
-                    onClick={showDrawer}
-                    icon={<MenuOutlined />}
-                    style={{ marginInlineStart: 1 }}
-                    aria-label="Open menu"
-                />
-                <Drawer
-                    title="Menu"
-                    placement="right"
-                    closable={true}
-                    onClose={onClose}
-                    open={open}
-                >
-                    <MenuItems onClose={onClose} />
-                </Drawer>
-            </Header>
-        </Layout>
-    );
-};
+            ) : (
+                <Card style={{ marginBottom: '20px' }}>
+                    <Row align="middle">
+                        <Col span={6}>
+                            <Avatar size={64} src={selectedUser.avatarUrl} />
+                        </Col>
+                        <Col span={14}>
+                            <h2>{selectedUser.username}</h2>
+                        </Col>
+                        <Col span={4}>
+                            <Button 
+                                type="default" 
+                                onClick={() => {
+                                    setSelectedUserId(null);
+                                    setSelectedUser(null);
+                                }}
+                            >
+                                إلغاء الاختيار
+                            </Button>
+                        </Col>
+                    </Row>
+                </Card>
+            )}
 
-export default Navbar;
-```
+            <UserForm 
+                visible={showForm} 
+                onCreate={handleSubmit} 
+                onCancel={() => setShowForm(false)} 
+            />
 
-### 4. **ملف `index.js`:**
-```javascript
-import React from 'react';
-import ReactDOM from 'react-dom';
-import { Provider } from 'react-redux';
-import store from './store/store'; // استيراد المتجر
-import App from './App';
-
-ReactDOM.render(
-    <Provider store={store}>
-        <App />
-    </Provider>,
-    document.getElementById('root')
-);
-```
-
-### 5. **ملف `MenuItems.js`:**
-يمكنك إضافة مكون `MenuItems` حسب الحاجة. إليك مثال بسيط:
-```javascript
-import React from 'react';
-
-const MenuItems = ({ onClose }) => {
-    return (
-        <div>
-            <h2>قائمة المستخدمين</h2>
-            {/* هنا يمكنك إضافة قائمة بالمستخدمين */}
-            <button onClick={() => { onClose(); }}>إغلاق</button>
+            <FloatingButton onClick={() => setShowLinks(!showLinks)} menuItems={menuItems} />
         </div>
     );
 };
 
-export default MenuItems;
-```
-
-### شرح الهيكل:
-- **`components/`:** يحتوي على المكونات الرئيسية مثل `Navbar` و`MenuItems`.
-- **`context/`:** يحتوي على سياق الثيم (Theme Context).
-- **`store/`:** يحتوي على ملفات Redux مثل `userSlice.js` و`store.js`.
-- **`App.js`:** يحتوي على مكون التطبيق الرئيسي.
-- **`index.js`:** نقطة الدخول لتطبيق React.
-
-بهذا الشكل، يكون لديك تطبيق React منظم باستخدام Redux لإدارة الحالة. يمكنك توسيع هذا الهيكل حسب احتياجات مشروعك. إذا كان لديك أي أسئلة إضافية، فلا تتردد في طرحها!أكد من اختبار جميع الميزات الجديدة للتحقق من أنها تعمل بشكل صحيح. إذا كان لديك أي استفسارات أو تحتاج إلى مساعدة إضافية، فلا تتردد في طرحها!ذا كان لديك أي استفسارات أو تحتاج إلى مزيد من المساعدة، فلا تتردد في طرحها!أكد من أن كل جزء من الكود يعمل بشكل صحيح وأن لديك جميع المكتبات المطلوبة مثبتة. إذا كان لديك أي استفسارات أو تحتاج إلى مزيد من المساعدة، فلا تتردد في طرحها!ذا كان لديك أي أسئلة أو تحتاج إلى مزيد من التوضيح حول أي نقطة، فلا تتردد في طرحها!ذا كان لديك أي استفسارات إضافية أو تحتاج إلى مزيد من التوضيحات، فلا تتردد في طرحها!قة، يمكنك إدارة الفئات، وتحرير المقالات، وحذفها في تطبيق المدونة الخاص بك.
+export default Home;ة. يمكنك توسيع هذا الهيكل حسب احتياجات مشروعك. إذا كان لديك أي أسئلة إضافية، فلا تتردد في طرحها!أكد من اختبار جميع الميزات الجديدة للتحقق من أنها تعمل بشكل صحيح. إذا كان لديك أي استفسارات أو تحتاج إلى مساعدة إضافية، فلا تتردد في طرحها!ذا كان لديك أي استفسارات أو تحتاج إلى مزيد من المساعدة، فلا تتردد في طرحها!أكد من أن كل جزء من الكود يعمل بشكل صحيح وأن لديك جميع المكتبات المطلوبة مثبتة. إذا كان لديك أي استفسارات أو تحتاج إلى مزيد من المساعدة، فلا تتردد في طرحها!ذا كان لديك أي أسئلة أو تحتاج إلى مزيد من التوضيح حول أي نقطة، فلا تتردد في طرحها!ذا كان لديك أي استفسارات إضافية أو تحتاج إلى مزيد من التوضيحات، فلا تتردد في طرحها!قة، يمكنك إدارة الفئات، وتحرير المقالات، وحذفها في تطبيق المدونة الخاص بك.

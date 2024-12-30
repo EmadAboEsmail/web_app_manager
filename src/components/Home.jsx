@@ -1,154 +1,162 @@
-import React, { useEffect, useState } from 'react';
-import { Form, Input, Button, Select, message, Spin } from 'antd';
-import { getAllUsers, createUser, updateUser, deleteUser } from '@/api/index'; // تأكد من وجود الدوال المناسبة في api.js
-import 'antd/dist/antd'; // استيراد أنماط Ant Design
+// Home.js
+import React, { useEffect, useState, useCallback } from 'react';
+import { notification, Spin, Select, Button, Modal, Avatar, Card, Row, Col } from 'antd';
+import { getAllUsers, createUser, updateUser, deleteUser } from '@/api/index';
+import UserForm from '@/components/Users/UserForm';
+import FloatingButton from '@/components/Users/FloatingButton';
+import { DollarOutlined, UserAddOutlined, CreditCardOutlined, DeleteOutlined, ReadOutlined, } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 
 const { Option } = Select;
-
 const Home = () => {
-    const [users, setUsers] = useState([]); // قائمة المستخدمين
-    const [selectedUserId, setSelectedUserId] = useState(() => {
-        // استرجاع معرف المستخدم المحدد من localStorage
-        return localStorage.getItem('selectedUserId') || null;
-    }); 
-    const [loading, setLoading] = useState(true); // حالة التحميل
-    const [isEditing, setIsEditing] = useState(false); // حالة تعديل المستخدم
-    const [form] = Form.useForm(); // استخدام Form من Ant Design
+    const navigate = useNavigate();
+    const [users, setUsers] = useState([]);
+    const [selectedUserId, setSelectedUserId] = useState(localStorage.getItem('selectedUserId') || null);
+    const [loading, setLoading] = useState(true);
+    const [showForm, setShowForm] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
 
-    useEffect(() => {
-        const fetchAllUsers = async () => {
-            try {
-                const allUsers = await getAllUsers(); // جلب جميع المستخدمين
-                setUsers(allUsers);
-            } catch (err) {
-                message.error('Failed to load users: ' + err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchAllUsers();
+    const fetchAllUsers = useCallback(async () => {
+        setLoading(true);
+        try {
+            const allUsers = await getAllUsers();
+            setUsers(allUsers);
+        } catch (err) {
+            notification.error({
+                message: 'خطأ',
+                description: `فشل في تحميل المستخدمين: ${err.message}`,
+            });
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
     useEffect(() => {
-        if (selectedUserId) {
-            const user = users.find(user => user.id === selectedUserId); // العثور على المستخدم المحدد
-            if (user) {
-                // إعداد النموذج مع بيانات المستخدم
-                form.setFieldsValue({
-                    username: user.username,
-                    password: '', // إعادة تعيين كلمة المرور
-                });
-                setIsEditing(true);
-            } else {
-                setIsEditing(false);
-            }
-        }
-    }, [selectedUserId, users, form]);
+        fetchAllUsers();
+    }, [fetchAllUsers]);
 
     const handleUserSelect = (userId) => {
         setSelectedUserId(userId);
-        localStorage.setItem('selectedUserId', userId); // تخزين معرف المستخدم في localStorage
+        localStorage.setItem('selectedUserId', userId);
+        setIsEditing(users.some(user => user.id === userId));
+
+        const user = users.find(user => user.id === userId);
+        setSelectedUser(user);
     };
 
     const handleSubmit = async (values) => {
         try {
             if (isEditing) {
                 await updateUser(selectedUserId, values);
-                message.success('User updated successfully');
+                notification.success({ message: 'نجاح', description: 'تم تحديث المستخدم بنجاح' });
             } else {
                 await createUser(values);
-                message.success('User added successfully');
+                notification.success({ message: 'نجاح', description: 'تم إضافة مستخدم بنجاح' });
             }
-            // تحديث قائمة المستخدمين
-            const allUsers = await getAllUsers();
-            setUsers(allUsers);
-            form.resetFields(); // إعادة تعيين النموذج
-            setSelectedUserId(null);
-            setIsEditing(false);
-            localStorage.removeItem('selectedUserId'); // إزالة معرف المستخدم من localStorage
+            await fetchAllUsers();
+            setShowForm(false);
+            localStorage.removeItem('selectedUserId');
         } catch (err) {
-            message.error('Failed to save user: ' + err.message);
+            notification.error({
+                message: 'خطأ',
+                description: `فشل في حفظ المستخدم: ${err.message}`,
+            });
         }
     };
 
-    const handleDeleteUser = async (userId) => {
-        if (window.confirm("Are you sure you want to delete this user?")) { // تأكيد قبل الحذف
-            try {
-                await deleteUser(userId); // استدعاء دالة حذف المستخدم
-                message.success('User deleted successfully');
-                const allUsers = await getAllUsers(); // تحديث القائمة
-                setUsers(allUsers);
-                form.resetFields(); // إعادة تعيين النموذج
-                setSelectedUserId(null);
-                setIsEditing(false);
-                localStorage.removeItem('selectedUserId'); // إزالة معرف المستخدم من localStorage
-            } catch (err) {
-                message.error('Failed to delete user: ' + err.message);
-            }
-        }
+    const handleDeleteUser = () => {
+        Modal.confirm({
+            title: 'تأكيد الحذف',
+            content: 'هل أنت متأكد أنك تريد حذف هذا المستخدم؟',
+            onOk: async () => {
+                try {
+                    await deleteUser(selectedUserId);
+                    notification.success({ message: 'نجاح', description: 'تم حذف المستخدم بنجاح' });
+                    await fetchAllUsers();
+                    setSelectedUserId(null);
+                    setSelectedUser(null);
+                    localStorage.removeItem('selectedUserId');
+                } catch (err) {
+                    notification.error({
+                        message: 'خطأ',
+                        description: `فشل في حذف المستخدم: ${err.message}`,
+                    });
+                }
+            },
+        });
     };
 
     if (loading) {
-        return <Spin size="large" />; // عرض حالة التحميل
+        return <Spin size="large" />;
     }
 
-    // العثور على المستخدم المحدد
-    const selectedUser = users.find(user => user.id === selectedUserId);
+    const menuItems = [
+        { label: 'incomes', icon: <DollarOutlined />, onClick: () => navigate('/incomes') },
+        { label: 'expenses', icon: <CreditCardOutlined />, onClick: () => navigate('/expenses') },
+        { label: 'articles', icon: <ReadOutlined />, onClick: () => navigate('/articles') },
+        { label: 'adduser', icon: <UserAddOutlined />, onClick: () => { setIsEditing(false); setShowForm(true); } },
+    ];
 
     return (
-        <div style={{ padding: '20px' }}>
-            <h2>User Management</h2>
-            <Form form={form} layout="vertical" onFinish={handleSubmit}>
-                <Form.Item
-                    name="username"
-                    label="Username"
-                    rules={[{ required: true, message: 'Please input your username!' }]}
-                >
-                    <Input placeholder="Enter username" />
-                </Form.Item>
-                <Form.Item
-                    name="password"
-                    label="Password"
-                    rules={[{ required: !isEditing, message: 'Please input your password!' }]}
-                >
-                    <Input.Password placeholder="Enter password" />
-                </Form.Item>
-                <Form.Item>
-                    <Button type="primary" htmlType="submit">
-                        {isEditing ? 'Update User' : 'Add User'}
-                    </Button>
-                </Form.Item>
-            </Form>
+        <div style={{ padding: '20px', backgroundColor: '#f5f5f5', minHeight: '100vh', direction: 'rtl' }}>
+            <header style={{ marginBottom: '20px', textAlign: 'center' }}>
+                <h1 style={{ color: '#333', fontSize: '2rem' }}>إدارة المستخدمين</h1>
+            </header>
 
-            <h3>Select a User to Edit or Delete</h3>
-            <Select
-                style={{ width: '100%', marginBottom: '20px' }}
-                placeholder="Select a user"
-                onChange={handleUserSelect}
-                value={selectedUserId || undefined}
-            >
-                {users.map((user) => (
-                    <Option key={user.id} value={user.id}>
-                        {user.username}
-                    </Option>
-                ))}
-            </Select>
+            {!selectedUserId ? (
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
+                    <Select
+                        style={{ flex: 1, marginRight: '10px' }}
+                        placeholder="اختر مستخدمًا"
+                        onChange={handleUserSelect}
+                        value={selectedUserId || undefined}
+                    >
+                        {users.map(user => (
+                            <Option key={user.id} value={user.id}>
+                                {user.username}
+                            </Option>
+                        ))}
+                    </Select>
 
-            {isEditing && (
-                <Button type="danger" onClick={() => handleDeleteUser(selectedUserId)}>
-                    Delete User
-                </Button>
-            )}
-
-            {/* عرض معلومات المستخدم المحدد */}
-            {selectedUser && (
-                <div style={{ marginTop: '20px' }}>
-                    <h3>User Details:</h3>
-                    <p><strong>Username:</strong> {selectedUser.username}</p>
-                    <p><strong>User ID:</strong> {selectedUser.id}</p>
+                    {isEditing && (
+                        <Button type="default" danger onClick={handleDeleteUser}>
+                            <DeleteOutlined /> حذف
+                        </Button>
+                    )}
                 </div>
+            ) : (
+                <Card style={{ marginBottom: '20px', padding: '20px' }}>
+                    <Row align="middle" gutter={16}>
+                        <Col span={6}>
+                            {selectedUser && <Avatar size={64} src={selectedUser.avatarUrl} />}
+                        </Col>
+                        <Col span={14}>
+                            {selectedUser && <h2 style={{ margin: 0 }}>{selectedUser.username}</h2>}
+                        </Col>
+                        <Col span={4}>
+                            <Button 
+                                type="default" 
+                                onClick={() => { 
+                                    setSelectedUserId(null); 
+                                    setSelectedUser(null); 
+                                }} 
+                                style={{ width: '100%' }}
+                            >
+                                X
+                            </Button>
+                        </Col>
+                    </Row>
+                </Card>
             )}
+
+            <UserForm 
+                visible={showForm} 
+                onCreate={handleSubmit} 
+                onCancel={() => setShowForm(false)} 
+            />
+
+            <FloatingButton onClick={() => setShowLinks(!showLinks)} menuItems={menuItems} />
         </div>
     );
 };

@@ -215,20 +215,14 @@ export const getUserExpenses = async (userId) => {
 
 // دالة لجلب دخل المستخدم
 export const getUserIncomes = async (userId) => {
-    const token = localStorage.getItem('token');
     try {
-        const response = await axios.get(`${API_URL}/users/${userId}/incomes/`, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        });
+        const response = await axios.get(`${API_URL}/users/${userId}/incomes/`);
+        // console.log('Response data:', response.data); // تسجيل البيانات للتحقق
         return response.data;
     } catch (error) {
         throw new Error('Error fetching user incomes: ' + error.message);
     }
-};
-
-// دالة لجلب مقالات المستخدم
+};// دالة لجلب مقالات المستخدم
 export const getUserArticles = async (userId) => {
     const token = localStorage.getItem('token');
     try {

@@ -2,6 +2,7 @@
 import React from 'react';
 import { Menu } from 'antd';
 import { Link } from 'react-router-dom';
+import { HomeTwoTone } from '@mui/icons-material';
 
 const MenuItems = ({ onClose }) => {
     const items = [
@@ -10,7 +11,7 @@ const MenuItems = ({ onClose }) => {
             key: "1",
         },
         {
-            label: <Link to="/users">Users</Link>,
+            label: <Link to="/users">Users <HomeTwoTone /></Link>,
             key: "2",
         },
         {

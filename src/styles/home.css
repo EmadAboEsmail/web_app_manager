@@ -1,4 +1,4 @@
-.home-container {
+. ome-container {
   padding: 20px;
   transition: background-color 0.3s, color 0.3s;
   min-height: 100vh; /* التأكد من تغطية كامل ارتفاع الصفحة */
@@ -33,4 +33,20 @@
   background-color: rgba(255, 255, 255, 0.2); /* لون خلفية عند التحويم */
   color: #1890ff; /* تغيير اللون عند التحويم */
 }
+.navigation {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px;
+    background-color: #fff;
+    border-top: 1px solid #ccc;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
 
+.nav-icon {
+    width: 30px;
+    height: 30px;
+    background-color: #ccc;
+    border-radius: 50%;
+}
